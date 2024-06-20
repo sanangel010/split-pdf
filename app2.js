@@ -56,7 +56,7 @@ async function processPDFs(directoryPath) {
           console.log(`Pagina ${i + 1} de ${filePath} guardado en::: ${newPdfPath}`); // Imprime en la consola que la página ha sido guardada
         }
       } else {
-        console.log(`Skipping single-page PDF: ${filePath}`); // Imprime un mensaje si el PDF tiene solo una página
+        console.log(`Se brinca documento de una página PDF: ${filePath}`); // Imprime un mensaje si el PDF tiene solo una página
       }
 
       processedFilesCount++; // Incrementa el contador de archivos procesados
