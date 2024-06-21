@@ -4,6 +4,7 @@
   <title>Escuela Federal de Formación Judicial</title>
   <!-- Incluir Bootstrap CSS desde un CDN -->
   <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="shortcut icon" href="cjf.ico">
   <!-- Agregar estilos personalizados -->
   <style>
     body {
@@ -29,38 +30,55 @@
 </head>
 <body>
   <div class="container">
-    <h1>Secciona PDF´s en páginas</h1>
+    <h1>Secciona PDF´s</h1>
     <div class="text-center">
+      <!-- Botón para seleccionar el directorio -->
       <button id="select-directory" class="btn btn-primary">Seleccionar Directorio</button>
     </div>
+    <!-- Opciones para separar o unificar PDFs -->
+    <div class="text-center mt-3">
+      <input type="radio" id="separate" name="operation" value="separate" checked>
+      <label for="separate">Separar PDFs</label>
+      <input type="radio" id="unify" name="operation" value="unify" class="ml-2">
+      <label for="unify">Unificar PDFs</label>
+    </div>
+    <!-- Párrafo para mostrar el directorio seleccionado -->
     <p id="selected-directory" class="text-center text-muted">No se ha seleccionado un directorio</p>
+    <!-- Área de texto para mostrar los mensajes de log -->
     <textarea id="log" class="form-control" readonly></textarea>
+    <!-- Párrafo para mostrar el tiempo total de procesamiento -->
+    <p id="total-time" class="text-center text-muted"></p>
   </div>
   <!-- Incluir jQuery y Bootstrap JS desde un CDN -->
   <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
   <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
   <script>
+    // Función para agregar mensajes al textarea de log
     function logMessage(message) {
       const logElement = document.getElementById('log');
       logElement.value += message + '\n';
-      logElement.scrollTop = logElement.scrollHeight;
-      console.log(message);
+      logElement.scrollTop = logElement.scrollHeight; // Desplaza hacia abajo para ver el último mensaje
+      console.log(message); // También lo muestra en la consola para depuración
     }
 
+    // Evento click del botón para seleccionar el directorio
     document.getElementById('select-directory').addEventListener('click', async () => {
-      const directoryPath = await window.electron.selectDirectory();
+      const directoryPath = await window.electron.selectDirectory(); // Llama a la función para seleccionar directorio en el proceso principal
       const selectedDirectoryElement = document.getElementById('selected-directory');
       selectedDirectoryElement.innerText = directoryPath ? `Directorio Seleccionado: ${directoryPath}` : 'No se ha seleccionado un directorio';
       selectedDirectoryElement.className = directoryPath ? 'text-center text-success' : 'text-center text-muted';
       if (directoryPath) {
+        // Obtiene la operación seleccionada (separar o unificar)
+        const operation = document.querySelector('input[name="operation"]:checked').value;
         // Llama a la función para procesar PDFs
-        processPDFs(directoryPath);
+        processPDFs(directoryPath, operation);
       }
     });
 
-    async function processPDFs(directoryPath) {
+    // Función para procesar los PDFs en el directorio seleccionado
+    async function processPDFs(directoryPath, operation) {
       logMessage(`Procesando archivos en el directorio: ${directoryPath}`);
-      const response = await fetch('http://localhost:3000/process-pdfs', {
+      const response = await fetch(`http://localhost:3000/process-pdfs?operation=${operation}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -71,10 +89,18 @@
       logMessage(`Archivos procesados: ${result.processedFilesCount}`);
       logMessage(`PDFs generados: ${result.generatedPdfsCount}`);
       result.details.forEach(detail => {
-        logMessage(detail);
+        logMessage(detail); // Muestra los detalles de cada archivo procesado
       });
-      alert(`Archivos procesados: ${result.processedFilesCount}, PDFs generados: ${result.generatedPdfsCount}`);
+      const totalTimeElement = document.getElementById('total-time');
+      totalTimeElement.innerText = `Tiempo total de procesamiento: ${result.totalTime} segundos`;
+      alert(`Archivos procesados: ${result.processedFilesCount}, PDFs generados: ${result.generatedPdfsCount}, Tiempo total: ${result.totalTime} segundos`);
     }
+
+    // Escuchar mensajes de log del proceso principal
+    const { ipcRenderer } = require('electron');
+    ipcRenderer.on('log-message', (event, message) => {
+      logMessage(message);
+    });
   </script>
 </body>
 </html>

@@ -7,7 +7,7 @@ const { PDFDocument } = require('pdf-lib'); // Importa PDFDocument de pdf-lib pa
 // Función para crear la ventana de la aplicación
 function createWindow() {
   const win = new BrowserWindow({
-    width: 1000,
+    width: 800,
     height: 600,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'), // Ruta al script preload
@@ -43,13 +43,25 @@ app.on('activate', () => {
   }
 });
 
-// Función principal para procesar PDFs y separar sus páginas
-async function processPDFs(directoryPath) {
+// Función principal para procesar PDFs
+async function processPDFs(directoryPath, operation) {
   let processedFilesCount = 0;
   let generatedPdfsCount = 0;
   const details = [];
+  const startTime = Date.now();
 
-  // Función recursiva para procesar un directorio y sus subdirectorios
+  if (operation === 'separate') {
+    await processDirectory(directoryPath);
+  } else if (operation === 'unify') {
+    await unifyPDFs(directoryPath);
+  }
+
+  const endTime = Date.now();
+  const totalTime = (endTime - startTime) / 1000; // Convertir a segundos
+
+  return { processedFilesCount, generatedPdfsCount, details, totalTime };
+
+  // Función recursiva para procesar un directorio y sus subdirectorios (separar)
   async function processDirectory(dir) {
     const files = await fs.readdir(dir); // Lee los contenidos del directorio
 
@@ -71,6 +83,8 @@ async function processPDFs(directoryPath) {
       const log = message => {
         details.push(message); // Agrega el mensaje al array de detalles
         console.log(message); // También lo muestra en la consola para depuración
+        // Enviar mensaje a la ventana renderizada
+        BrowserWindow.getAllWindows()[0].webContents.send('log-message', message);
       };
 
       log(`Procesando::: ${filePath}`); // Log del inicio del procesamiento
@@ -104,21 +118,74 @@ async function processPDFs(directoryPath) {
     }
   }
 
-  await processDirectory(directoryPath); // Llama a processDirectory para empezar el procesamiento desde el directorio raíz
+  // Función para unificar todos los archivos PDF en un directorio
+  async function unifyPDFs(dir) {
+    try {
+      const log = message => {
+        details.push(message); // Agrega el mensaje al array de detalles
+        console.log(message); // También lo muestra en la consola para depuración
+        // Enviar mensaje a la ventana renderizada
+        BrowserWindow.getAllWindows()[0].webContents.send('log-message', message);
+      };
 
-  return { processedFilesCount, generatedPdfsCount, details }; // Devuelve el resultado del procesamiento
+      const files = await fs.readdir(dir); // Lee los contenidos del directorio
+      const pdfFiles = files.filter(file => path.extname(file).toLowerCase() === '.pdf');
+
+      // Ordena los archivos PDF basados en el número de página en el nombre del archivo
+      pdfFiles.sort((a, b) => {
+        const pageA = parseInt(a.match(/_pagina(\d+)\.pdf$/)[1], 10);
+        const pageB = parseInt(b.match(/_pagina(\d+)\.pdf$/)[1], 10);
+        return pageA - pageB;
+      });
+
+      const pdfDocs = [];
+      
+      for (const file of pdfFiles) {
+        const fullPath = path.join(dir, file); // Construye la ruta completa del archivo
+        log(`Añadiendo::: ${file} al documento unificado`);
+        const pdfBuffer = await fs.readFile(fullPath); // Lee el archivo PDF como un buffer
+        const pdfDoc = await PDFDocument.load(pdfBuffer, { ignoreEncryption: true }); // Carga el PDF en pdf-lib ignorando la encriptación
+        pdfDocs.push(pdfDoc);
+      }
+
+      if (pdfDocs.length > 0) {
+        const mergedPdf = await PDFDocument.create(); // Crea un nuevo documento PDF
+
+        for (const pdfDoc of pdfDocs) {
+          const copiedPages = await mergedPdf.copyPages(pdfDoc, pdfDoc.getPageIndices());
+          copiedPages.forEach((page) => {
+            mergedPdf.addPage(page); // Añade todas las páginas al documento unificado
+          });
+        }
+
+        const mergedPdfBytes = await mergedPdf.save(); // Guarda el documento unificado como un buffer
+        const mergedPdfPath = path.join(dir, `documento_unificado.pdf`); // Construye la ruta para el nuevo archivo PDF unificado
+        await fs.writeFile(mergedPdfPath, mergedPdfBytes); // Escribe el nuevo archivo PDF unificado en el sistema de archivos
+
+        generatedPdfsCount++; // Incrementa el contador de PDFs generados
+        log(`Documento unificado guardado en::: ${mergedPdfPath}`); // Log del archivo generado
+      }
+
+      processedFilesCount = pdfDocs.length; // Incrementa el contador de archivos procesados
+    } catch (error) {
+      details.push(`Error unificando documentos en::: ${dir}: ${error}`); // Agrega el error al array de detalles
+      console.error(`Error unificando documentos en::: ${dir}:`, error); // Muestra el error en la consola
+    }
+  }
 }
 
 // Crea un servidor HTTP para recibir las solicitudes de procesamiento
 const server = http.createServer(async (req, res) => {
-  if (req.method === 'POST' && req.url === '/process-pdfs') {
+  if (req.method === 'POST' && req.url.startsWith('/process-pdfs')) {
+    const url = new URL(req.url, `http://${req.headers.host}`);
+    const operation = url.searchParams.get('operation');
     let body = '';
     req.on('data', chunk => {
       body += chunk.toString(); // Concatena los datos recibidos
     });
     req.on('end', async () => {
       const { path } = JSON.parse(body); // Parsea el JSON recibido
-      const result = await processPDFs(path); // Procesa los PDFs en la ruta especificada
+      const result = await processPDFs(path, operation); // Procesa los PDFs en la ruta especificada
       res.writeHead(200, { 'Content-Type': 'application/json' }); // Configura la cabecera de la respuesta
       res.end(JSON.stringify(result)); // Envía el resultado como JSON
     });

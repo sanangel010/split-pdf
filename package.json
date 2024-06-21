@@ -9,13 +9,13 @@
     "package": "electron-packager . pdf-to-pages --platform=win32 --arch=x64 --out=dist --overwrite"
   },
   "build": {
-    "appId": "com.tu.nombre.pdf-to-pages",
+    "appId": "split_pdf",
     "mac": {
       "target": [
         "dmg",
         "zip"
       ],
-      "icon": "build/icon.icns"
+      "icon": "cjf.ico"
     },
     "files": [
       "main.js",
