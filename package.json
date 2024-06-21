@@ -5,7 +5,26 @@
   "main": "main.js",
   "scripts": {
     "start": "electron .",
+    "dist": "electron-builder",
     "package": "electron-packager . pdf-to-pages --platform=win32 --arch=x64 --out=dist --overwrite"
+  },
+  "build": {
+    "appId": "com.tu.nombre.pdf-to-pages",
+    "mac": {
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "icon": "build/icon.icns"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "index.html",
+      "build/**/*",
+      "node_modules/**/*",
+      "package.json"
+    ]
   },
   "keywords": [],
   "author": "Mtro. José Ángel Haro Juárez",
@@ -16,6 +35,7 @@
   },
   "devDependencies": {
     "electron": "^24.2.0",
+    "electron-builder": "^24.13.3",
     "electron-packager": "^17.1.2"
-  }  
+  }
 }

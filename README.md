@@ -43,7 +43,7 @@ Para ejecutar la aplicación con una interfaz gráfica en modo desarrollo:
    npm start
 ```
 
-### Generación del ejecutable con Electron
+### Generación del ejecutable con Electron Windows
 1. Instalar electron-packager como dependencia de desarrollo:
 ```sh
    npm install electron-packager --save-dev
@@ -53,6 +53,18 @@ Para ejecutar la aplicación con una interfaz gráfica en modo desarrollo:
 ```sh
    npm run package
 ```
+
+### Generación del ejecutable con Electron MacOs
+1. Instalar electron-packager como dependencia de desarrollo:
+```sh
+   npm install electron-builder --save-dev
+```
+
+2. Empaquetar la aplicación para la plataforma de Windows:
+```sh
+   npm run dist
+```
+
 ## Autor
 Mtro. José Ángel Haro Juárez
 
