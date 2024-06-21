@@ -133,8 +133,14 @@ async function processPDFs(directoryPath, operation) {
 
       // Ordena los archivos PDF basados en el número de página en el nombre del archivo
       pdfFiles.sort((a, b) => {
-        const pageA = parseInt(a.match(/_pagina(\d+)\.pdf$/)[1], 10);
-        const pageB = parseInt(b.match(/_pagina(\d+)\.pdf$/)[1], 10);
+        const matchA = a.match(/_pagina(\d+)\.pdf$/);
+        const matchB = b.match(/_pagina(\d+)\.pdf$/);
+        if (!matchA || !matchB) {
+          log(`Formato de archivo no esperado: ${a} o ${b}`);
+          return 0;
+        }
+        const pageA = parseInt(matchA[1], 10);
+        const pageB = parseInt(matchB[1], 10);
         return pageA - pageB;
       });
 
