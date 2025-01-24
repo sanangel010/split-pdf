@@ -93,7 +93,9 @@
       });
       const totalTimeElement = document.getElementById('total-time');
       totalTimeElement.innerText = `Tiempo total de procesamiento: ${result.totalTime} segundos`;
-      alert(`Archivos procesados: ${result.processedFilesCount}, PDFs generados: ${result.generatedPdfsCount}, Tiempo total: ${result.totalTime} segundos`);
+      const completionMessage = `Proceso completado. Archivos procesados: ${result.processedFilesCount}, PDFs generados: ${result.generatedPdfsCount}, Tiempo total: ${result.totalTime} segundos`;
+      logMessage(completionMessage);
+      alert(completionMessage);
     }
 
     // Escuchar mensajes de log del proceso principal

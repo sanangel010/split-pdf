@@ -45,6 +45,7 @@ app.on('activate', () => {
 
 // Función principal para procesar PDFs
 async function processPDFs(directoryPath, operation) {
+  const startTime = Date.now();
   let processedFilesCount = 0;
   let generatedPdfsCount = 0;
   const details = [];
@@ -58,22 +59,28 @@ async function processPDFs(directoryPath, operation) {
       if (entry.isDirectory()) {
         await processDirectory(fullPath); // Procesa la subcarpeta de manera recursiva
       } else if (entry.isFile() && path.extname(entry.name).toLowerCase() === '.pdf') {
+        processedFilesCount++;
         pdfFiles.push(fullPath); // Agrega el archivo PDF a la lista
       }
     }
 
     if (pdfFiles.length > 0) {
-      await unifyPDFs(dir, pdfFiles, details); // Unifica los PDFs en la carpeta actual
+      await unifyPDFs(dir, pdfFiles, details, generatedPdfsCount); // Unifica los PDFs en la carpeta actual
+      generatedPdfsCount++; // Incrementa el contador de PDFs generados
     }
   }
 
   await processDirectory(directoryPath);
 
+  const endTime = Date.now();
+  const totalTime = ((endTime - startTime) / 1000).toFixed(2);
+  return { processedFilesCount, generatedPdfsCount, details, totalTime };
+
   // Aquí puedes agregar cualquier lógica adicional que necesites después de procesar todas las carpetas y archivos
 }
 
 // Función para unificar todos los archivos PDF en un directorio
-async function unifyPDFs(dir, pdfFiles, details) {
+async function unifyPDFs(dir, pdfFiles, details, generatedPdfsCount) {
   try {
     const log = message => {
       details.push(message); // Agrega el mensaje al array de detalles
@@ -120,11 +127,9 @@ async function unifyPDFs(dir, pdfFiles, details) {
       const mergedPdfPath = path.join(dir, mergedPdfName); // Construye la ruta para el nuevo archivo PDF unificado
       await fs.writeFile(mergedPdfPath, mergedPdfBytes); // Escribe el nuevo archivo PDF unificado en el sistema de archivos
 
-      generatedPdfsCount++; // Incrementa el contador de PDFs generados
       log(`Documento unificado guardado en::: ${mergedPdfPath}`); // Log del archivo generado
     }
 
-    processedFilesCount = pdfDocs.length; // Incrementa el contador de archivos procesados
   } catch (error) {
     details.push(`Error unificando documentos en::: ${dir}: ${error}`); // Agrega el error al array de detalles
     console.error(`Error unificando documentos en::: ${dir}:`, error); // Muestra el error en la consola
